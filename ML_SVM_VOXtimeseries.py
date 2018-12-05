@@ -18,12 +18,12 @@
 # ボクセルごとにあるデータにおけるNスキャン分の時系列データをテストデータ，テストデータを除いた残りのデータにおけるNスキャン分の時系列データ1ずつずらしながらを学習データとして取得し，SVMを用いて学習，交差検証法を用いて識別性能評価を行う．
 # ベクトル：各ボクセルにおけるデータにおけるNスキャン分の時系列データ
 
-# In[1]:
+# In[14]:
 
 print('############ ML_SVM_VOXtimeseries.py program excution ############')
 
 
-# In[2]:
+# In[15]:
 
 import numpy as np
 import pandas as pd
@@ -32,20 +32,20 @@ import sys
 from sklearn import svm
 
 
-# In[42]:
+# In[18]:
 
 args = sys.argv
 PATH = args[1]
 
 # # jupyter notebookのときはここで指定
-# PATH = '../State-2fe_Active/20181029rn/64ch/RawData/'
+# PATH = '../State-2fe_MaskBrodmann/20181029rn/mb/RawData/'
 
 
 # 検証手法
 col_name = 'leave-one-out'
 
 
-# In[45]:
+# In[19]:
 
 headcoil = PATH.split('/')[3]
 
@@ -67,7 +67,7 @@ print("TimeSeries(Scan Num) : " + str(N))
 # 引数としてあるボクセルにおける全試行分のデータをdata，タスクを見分けるための番号をlabelに受け取る．
 # 各試行で1ずつずらしながらNスキャン分の時系列データを取得する．全試行の時系列データをまとめて返す．
 
-# In[19]:
+# In[20]:
 
 def TsShift(data, label):
 
@@ -106,7 +106,7 @@ def TsShift(data, label):
 # テストデータに用いるデータごとに識別できたかできなかったか（1か0）を取得，全テストデータで識別できた(1)の割合を算出（leave-one-outと同じ要領）．
 # 得られた割合をパーセント表記にし，main関数へ返す．
 
-# In[27]:
+# In[21]:
 
 def SVM_LOO(data):
 
@@ -149,10 +149,6 @@ def SVM_LOO(data):
         # ラベルを作成
         y_train = np.array(list(traindata['label']))
 
-
-        print("Test Data : " + str(test_fst) + "-" + str(test_end) + " / Train Data Num : " + str(len(traindata)))
-
-
         # 線形SVMのインスタンスを生成
         model = svm.SVC(kernel = 'linear', C=1)
 
@@ -174,7 +170,7 @@ def SVM_LOO(data):
     return result
 
 
-# In[28]:
+# In[22]:
 
 if __name__ == '__main__':
 
@@ -193,55 +189,81 @@ if __name__ == '__main__':
     tapping = tapping.set_index(0)
 
 
-# In[35]:
+    # In[49]:
 
-# 全ボクセルの識別率を格納するデータフレーム
-voxAc = pd.DataFrame(index = sorted(list(set(rest.index))), columns = [col_name])
+    # ボクセル数
+    voxNum = len(rest)
 
-# ボクセル数
-voxNum = len(rest)
+    # 全ボクセルの識別率を格納するデータフレーム
+    voxAc = pd.DataFrame(index = range(voxNum), columns = [col_name])
 
-for voxNo in range(voxNum):
+    counter = 0
+    csvcounter = 0
+    voxNames = []
 
-    voxName = 'Voxel' + str(voxNo + 1)
+    for voxNo in range(voxNum):
 
-    print(voxName)
+        voxName = 'Voxel' + str(voxNo + 1)
 
-    # ボクセルのデータを取得
-    restVox = rest.loc[voxName]
-    tappingVox = tapping.loc[voxName]
+        print(voxName + '( ' + str(counter) + ' / ' + str(voxNum) + ' )')
 
-    # ボクセルにおける時系列データを取得
-    restVoxTs = TsShift(restVox, 0)
-    tappingVoxTs = TsShift(tappingVox, 1)
+        # ボクセルのデータを取得
+        restVox = rest.loc[voxName]
+        tappingVox = tapping.loc[voxName]
 
-    # 全タスクを縦結合
-    VoxTs = pd.concat([restVoxTs, tappingVoxTs])
+        # ボクセルにおける時系列データを取得
+        restVoxTs = TsShift(restVox, 0)
+        tappingVoxTs = TsShift(tappingVox, 1)
 
-    # 0-3列目は条件判定用の要素，要素名をつけておく
-    col_names = list(VoxTs.columns)
-    col_names[0:3] = ['label', 'fst', 'end']
-    VoxTs.columns = col_names
+        # 全タスクを縦結合
+        VoxTs = pd.concat([restVoxTs, tappingVoxTs])
 
-    VoxTs.index = range(0,len(VoxTs))
+        # 0-3列目は条件判定用の要素，要素名をつけておく
+        col_names = list(VoxTs.columns)
+        col_names[0:3] = ['label', 'fst', 'end']
+        VoxTs.columns = col_names
 
-    # 学習と評価
-    result_vox = SVM_LOO(VoxTs)
+        VoxTs.index = range(0,len(VoxTs))
 
-    print(result_vox)
+        # 学習と評価
+        result_vox = SVM_LOO(VoxTs)
 
-    # データフレームに格納
-    voxAc.at[voxName, col_name] = result_vox
+        print(result_vox)
 
-
-
-# In[36]:
-
-print(voxAc)
-
-# csv書き出し
-PATH_RESULT = PATH + 'ACCURACY[loo]_VOXtimeseries' + str(N) +'_SVM.csv'
-voxAc.to_csv(PATH_RESULT, index = True)
+        # データフレームに格納
+        voxAc.at[voxNo, :] = result_vox
 
 
-# In[ ]:
+        # 途中経過見る用
+        # 何ボクセルで一度出力するか
+        midNum = 1000
+
+        if (counter % midNum == 0) and (counter != 0):
+
+            PATH_test = PATH + 'ACMID' + str(csvcounter) + '[loo]_VOXtimeseries' + str(N) +'_SVM.csv'
+            print(PATH_test)
+            MidVoxAc = voxAc.iloc[(csvcounter * midNum):((csvcounter + 1) * midNum), :]
+            MidVoxAc.index = voxNames
+            MidVoxAc.to_csv(PATH_test, index = True)
+
+            csvcounter = csvcounter + 1
+
+        counter = counter + 1
+        voxNames = voxNames + [voxName]
+
+
+
+    # In[36]:
+
+
+    # csv書き出し
+    PATH_RESULT = PATH + 'ACCURACY[loo]_VOXtimeseries' + str(N) +'_SVM.csv'
+    voxAc.to_csv(PATH_RESULT, index = True)
+
+    # 行名つける
+    voxAc.index = voxNames
+    # csv書き出し
+    PATH_RESULT = PATH + 'ACCURACY[loo]_VOXtimeseries' + str(N) +'_SVM.csv'
+    voxAc.to_csv(PATH_RESULT, index = True)
+
+    # In[ ]:

@@ -8,7 +8,7 @@
 #
 # ---
 #
-# 入力：4D化した.niiファイル，[部位名]mask.niiファイル（chunks_list.csv, targets_list.csv）
+# 入力：4D化した.niiファイルがあるフォルダまでのパス / 書き出すcsvの保存先 / mask名（chunks_list.csv, targets_list.csv）
 #
 # ---
 #
