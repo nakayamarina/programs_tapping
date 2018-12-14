@@ -243,7 +243,7 @@ if __name__ == '__main__':
             PATH_test = PATH + 'ACMID' + str(csvcounter) + '[loo]_VOXtimeseries' + str(N) +'_SVM.csv'
             print(PATH_test)
             MidVoxAc = voxAc.iloc[(csvcounter * midNum):((csvcounter + 1) * midNum), :]
-            MidVoxAc.index = voxNames
+            MidVoxAc.index = voxNames[(csvcounter * midNum):((csvcounter + 1) * midNum)]
             MidVoxAc.to_csv(PATH_test, index = True)
 
             csvcounter = csvcounter + 1
